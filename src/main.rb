@@ -1,5 +1,6 @@
 require 'pg'
 require_relative 'resolve_cats_params'
+require_relative 'resolve_insert_value'
 
 connection = PG.connect(
   host: "localhost",
@@ -8,6 +9,7 @@ connection = PG.connect(
   user: "wg_forge",
   password: "42a"
 )
+
 
 connection.exec("SELECT * from cats") do |result|
   cats = result.to_a
@@ -18,30 +20,22 @@ connection.exec("SELECT * from cats") do |result|
   end
 
   cats_params = resolve_cats_params(cats)
-  cats_params.each do |tail_length, whiskers_length|
-    keys = "
-      tail_length_mean,
-      tail_length_median,
-      tail_length_mode,
-      whiskers_length_mean,
-      whiskers_length_median,
-      whiskers_length_mode
-    "
+  keys = cats_params.keys.join(",")
+  values = cats_params
+    .values
+    .map { |value| resolve_insert_value(value) }
+    .join(",")
 
-    values = "
-      #{tail_length['mean']}, 
-      #{tail_length['median']},
-      #{tail_length['mode']},
-      #{whiskers_length['mean']},
-      #{whiskers_length['median']},
-      #{whiskers_length['mode']}
-    "
-
-    connection.exec("INSERT INTO cats_stat (#{keys}) VALUES (#{values})")
-  end
+  connection.exec("INSERT INTO cats_stat (#{keys}) VALUES (#{values})")
 end
 
-# connection.exec("SELECT * from cat_colors_info") do |cat_colors_info|
-#   puts cat_colors_info.to_a
-# end
+connection.exec("SELECT * from cat_colors_info") do |cat_colors_info|
+  puts "cat_colors_info"
+  puts cat_colors_info.to_a
+end
+
+connection.exec("SELECT * from cats_stat") do |cats_stat|
+  puts "cats_stat"
+  puts cats_stat.to_a
+end
 
